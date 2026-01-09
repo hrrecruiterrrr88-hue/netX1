@@ -1,57 +1,30 @@
-name: NET X Final Build
+name: NET X Router Pro
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Create Project Structure
+      - name: Create Router Master Project
         run: |
-          # 1. إنشاء المجلدات
           mkdir -p app/src/main/java/com/turbo/net
           mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/mipmap-xhdpi
 
-          # 2. حل مشكلة الأيقونة (إذا لم توجد صورة سيصنع واحدة بيضاء بسيطة)
-          if [ -f "icon.png" ]; then
-            cp icon.png app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          else
-            echo "No icon.png found, creating a placeholder"
-            touch app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          fi
-
-          # 3. ملف الألوان والثيمات الأساسية
-          cat <<'EOF' > app/src/main/res/values/colors.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <color name="black">#FF000000</color>
-              <color name="white">#FFFFFFFF</color>
-              <color name="purple_500">#FF6200EE</color>
-          </resources>
-          EOF
-
-          cat <<'EOF' > app/src/main/res/values/themes.xml
-          <resources>
-              <style name="Theme.NetX" parent="Theme.AppCompat.Light.NoActionBar" />
-          </resources>
-          EOF
-
-          # 4. المانيفست (النسخة النهائية)
+          # 1. المانيفست مع صلاحيات الواي فاي المتقدمة
           cat <<'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
-              <application 
-                  android:label="NET X" 
-                  android:icon="@mipmap/ic_launcher" 
-                  android:theme="@style/Theme.NetX">
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+              <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <application android:label="NET X ROUTER" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
                   <activity android:name="com.turbo.net.MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -62,65 +35,90 @@ jobs:
           </manifest>
           EOF
 
-          # 5. كود الجافا
+          # 2. كود الجافا - محرك تثبيت أداء الروتر
           cat <<'EOF' > app/src/main/java/com/turbo/net/MainActivity.java
           package com.turbo.net;
-          import android.os.Bundle;
-          import android.widget.TextView;
-          import android.view.Gravity;
-          import android.graphics.Color;
+          import android.os.*;
+          import android.widget.*;
+          import android.view.*;
+          import android.graphics.*;
+          import android.graphics.drawable.*;
+          import android.net.wifi.WifiManager;
           import androidx.appcompat.app.AppCompatActivity;
 
           public class MainActivity extends AppCompatActivity {
+              WifiManager.WifiLock wifiLock;
+              boolean isLocked = false;
+
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+                  
+                  LinearLayout root = new LinearLayout(this);
+                  root.setOrientation(LinearLayout.VERTICAL);
+                  root.setGravity(Gravity.CENTER);
+                  root.setBackground(new GradientDrawable(GradientDrawable.Orientation.BR_TL, 
+                      new int[]{Color.parseColor("#000000"), Color.parseColor("#1a1a2e")}));
+                  root.setPadding(60, 60, 60, 60);
+
                   TextView tv = new TextView(this);
-                  tv.setText("NET X IS READY\n🚀");
-                  tv.setTextSize(30);
-                  tv.setTextColor(Color.BLUE);
+                  tv.setText("NET X | ROUTER MODE");
+                  tv.setTextSize(26);
+                  tv.setTextColor(Color.parseColor("#00f2ff"));
                   tv.setGravity(Gravity.CENTER);
-                  setContentView(tv);
+                  tv.setTypeface(Typeface.DEFAULT_BOLD);
+                  tv.setPadding(0, 0, 0, 100);
+                  root.addView(tv);
+
+                  Button booster = new Button(this);
+                  booster.setText("تثبيت أداء الروتر ⚡");
+                  booster.setTextSize(18);
+                  booster.setTextColor(Color.WHITE);
+                  
+                  // تصميم زرار احترافي نيون
+                  GradientDrawable btnStyle = new GradientDrawable();
+                  btnStyle.setColor(Color.parseColor("#bc13fe"));
+                  btnStyle.setCornerRadius(100);
+                  btnStyle.setStroke(5, Color.parseColor("#00f2ff"));
+                  booster.setBackground(btnStyle);
+                  booster.setPadding(80, 40, 80, 40);
+
+                  booster.setOnClickListener(v -> {
+                      if(!isLocked) {
+                          activateRouterBoost();
+                          booster.setText("ROUTER BOOST: ACTIVE ✅");
+                          booster.setBackgroundColor(Color.parseColor("#00ff88"));
+                          Toast.makeText(this, "تم قفل التردد على الروتر لأقصى سرعة", Toast.LENGTH_LONG).show();
+                          isLocked = true;
+                      }
+                  });
+
+                  root.addView(booster);
+                  setContentView(root);
+              }
+
+              private void activateRouterBoost() {
+                  // كود حقيقي لمنع الموبايل من تقليل استهلاك الوايفاي
+                  WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+                  if (wifiLock == null) {
+                      wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "NetXLock");
+                  }
+                  wifiLock.acquire(); // تفعيل القفل عالي الأداء
               }
           }
           EOF
 
-          # 6. إعدادات Gradle
+          # 3. إعدادات Gradle
           echo "android.useAndroidX=true" > gradle.properties
-          echo "android.enableJetifier=true" >> gradle.properties
-
           cat <<'EOF' > build.gradle
-          buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:8.1.0' }
-          }
+          buildscript { repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.1.0' } }
           allprojects { repositories { google(); mavenCentral() } }
           EOF
-
           cat <<'EOF' > app/build.gradle
           plugins { id 'com.android.application' }
-          android {
-              namespace 'com.turbo.net'
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.turbo.net"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-          }
-          dependencies {
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.android.material:material:1.9.0'
-          }
+          android { namespace 'com.turbo.net'; compileSdk 34; defaultConfig { applicationId "com.turbo.net"; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0" } }
+          dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
           EOF
-          echo "include ':app'" > settings.gradle
-
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 8.1.1
 
       - name: Build APK
         run: gradle assembleDebug
@@ -128,5 +126,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NET-X-Application
+          name: NET-X-Router-Turbo
           path: app/build/outputs/apk/debug/*.apk
